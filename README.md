@@ -1,1 +1,238 @@
-# registration-card-scanner
+# Registration Card Scanner
+
+An open-source, locally-runnable AI application that digitises handwritten and printed registration cards for a migration consultancy in Sri Lanka. Staff photograph or scan approximately 500 cards per event; the application extracts field values automatically, lets staff correct uncertain entries, and exports verified records to Excel — replacing manual data entry entirely.
+
+---
+
+## Table of Contents
+
+1. [Architecture Overview](#architecture-overview)
+2. [Prerequisites](#prerequisites)
+3. [Repository Layout](#repository-layout)
+4. [Quick-Start Setup](#quick-start-setup)
+5. [Development Commands](#development-commands)
+6. [Environment Variables](#environment-variables)
+7. [Coding Conventions](#coding-conventions)
+8. [Security & Privacy](#security--privacy)
+9. [Milestone Plan](#milestone-plan)
+
+---
+
+## Architecture Overview
+
+```
+Browser (Next.js)
+      │   REST / multipart
+      ▼
+FastAPI  (Python)
+  ├── Routers: health, projects, cards, templates, export
+  ├── Services: ocr_service, image_service, export_service
+  ├── Models / DB: SQLite via SQLModel
+  └── Storage: local filesystem  (originals + thumbnails)
+```
+
+- **Frontend** — Next.js 15 App Router, TypeScript, Tailwind CSS.  Displays the review queue, confidence heat-map overlay, and project/template management.
+- **Backend** — Python 3.11+, FastAPI.  All OCR (PaddleOCR + handwriting model) runs here; the frontend never touches images directly.
+- **Database** — SQLite (single file, zero-admin).  Phone numbers and all identifiers stored as `TEXT`.
+- **Image storage** — Original card images stored under `backend/data/images/originals/<project_id>/` with configurable retention.  Thumbnails under `thumbnails/`.
+- **Export** — `openpyxl` generates `.xlsx` files on demand.
+
+---
+
+## Prerequisites
+
+| Tool | Minimum version | Notes |
+|------|----------------|-------|
+| Python | 3.11 | 3.13 confirmed working |
+| Node.js | 18 LTS | 24 confirmed working |
+| npm | 9+ | bundled with Node |
+| Git | 2.x | — |
+| Windows / macOS / Linux | — | Windows 11 primary dev target |
+
+> **No paid services or cloud API keys are required.**
+
+---
+
+## Repository Layout
+
+```
+registration-card-scanner/
+├── frontend/                  # Next.js application
+│   ├── src/
+│   │   ├── app/               # App Router pages & layouts
+│   │   ├── components/        # Reusable UI components
+│   │   ├── lib/               # API client, utility helpers
+│   │   └── types/             # Shared TypeScript types
+│   ├── public/
+│   ├── .env.local.example
+│   └── package.json
+│
+├── backend/                   # FastAPI application
+│   ├── app/
+│   │   ├── main.py            # FastAPI entry point
+│   │   ├── routers/           # One file per resource
+│   │   ├── services/          # Business logic (OCR, image, export)
+│   │   ├── models/            # SQLModel ORM models
+│   │   ├── schemas/           # Pydantic request / response schemas
+│   │   └── core/              # Settings, DB session, logging
+│   ├── data/
+│   │   ├── images/            # Original card images (gitignored)
+│   │   └── db/                # SQLite database file (gitignored)
+│   ├── tests/
+│   ├── .env.example
+│   └── requirements.txt
+│
+├── docs/                      # Architecture diagrams, field-mapping specs
+├── .gitignore
+└── README.md
+```
+
+---
+
+## Quick-Start Setup
+
+### 1 — Clone
+
+```bash
+git clone <repo-url>
+cd registration-card-scanner
+```
+
+### 2 — Backend
+
+```bash
+cd backend
+
+# Create and activate virtual environment
+python -m venv .venv
+
+# Windows PowerShell
+.venv\Scripts\Activate.ps1
+# macOS / Linux
+source .venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Copy environment template
+cp .env.example .env
+# Edit .env with your preferred settings (all defaults work out of the box)
+
+# Start the API server (auto-reloads on file changes)
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+The API is then available at **http://127.0.0.1:8000**
+Interactive docs: **http://127.0.0.1:8000/docs**
+
+### 3 — Frontend
+
+```bash
+cd frontend
+
+# Install Node dependencies
+npm install
+
+# Copy environment template
+cp .env.local.example .env.local
+
+# Start Next.js dev server
+npm run dev
+```
+
+The UI is then available at **http://localhost:3000**
+
+---
+
+## Development Commands
+
+### Backend
+
+| Command | Purpose |
+|---------|---------|
+| `uvicorn app.main:app --reload` | Start API with hot-reload |
+| `pytest` | Run all tests |
+| `pytest -v tests/test_health.py` | Run a single test module |
+| `ruff check .` | Lint Python code |
+| `ruff format .` | Format Python code |
+| `mypy app/` | Type-check |
+
+### Frontend
+
+| Command | Purpose |
+|---------|---------|
+| `npm run dev` | Start Next.js dev server |
+| `npm run build` | Production build |
+| `npm run lint` | ESLint |
+| `npm test` | Jest unit tests (once configured) |
+
+---
+
+## Environment Variables
+
+### Backend (`backend/.env`)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DATABASE_URL` | `sqlite:///./data/db/app.db` | SQLite connection string |
+| `IMAGES_DIR` | `./data/images` | Root for original + thumbnail images |
+| `MAX_UPLOAD_SIZE_MB` | `20` | Per-image upload limit |
+| `IMAGE_RETENTION_DAYS` | `90` | Days before originals are eligible for deletion |
+| `LOG_LEVEL` | `INFO` | Python logging level |
+| `ALLOWED_ORIGINS` | `http://localhost:3000` | CORS origins (comma-separated) |
+
+### Frontend (`frontend/.env.local`)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `NEXT_PUBLIC_API_URL` | `http://localhost:8000` | Backend API base URL |
+
+> **Rule:** Never commit `.env` or `.env.local` files. Only commit `.env.example` / `.env.local.example`.
+
+---
+
+## Coding Conventions
+
+### Python (backend)
+
+- Python >= 3.11; use `from __future__ import annotations` everywhere.
+- Type-annotate all function signatures; `mypy` must pass with no errors.
+- Use `ruff` for linting and formatting (configured in `pyproject.toml`).
+- One router file per REST resource (`routers/cards.py`, `routers/projects.py`, ...).
+- One service file per capability (`services/ocr_service.py`, `services/export_service.py`, ...).
+- Never raise bare `Exception`; use custom exception classes in `app/core/exceptions.py`.
+- Store phone numbers, IDs, and reference codes as `String` columns, never `Integer`.
+- Return explicit `None` / empty list rather than inventing placeholder values for uncertain OCR fields.
+- Log at `WARNING` or above whenever OCR confidence drops below a configurable threshold.
+
+### TypeScript (frontend)
+
+- Strict mode enabled (`"strict": true` in `tsconfig.json`).
+- No `any` types; prefer `unknown` and narrow explicitly.
+- API calls live in `src/lib/api/` — one file per backend resource.
+- Components receive data as props; no direct `fetch` calls inside leaf components.
+- Uncertain / low-confidence fields must be visually flagged (yellow border + icon) — never silently shown as confirmed.
+
+### General
+
+- All user-visible strings must be in English (add i18n hooks for Sinhala/Tamil later).
+- Commit messages follow Conventional Commits (`feat:`, `fix:`, `chore:`, ...).
+- Every PR must include or update a test covering the changed behaviour.
+
+---
+
+## Security & Privacy
+
+- Registration card images contain personal data (names, passport numbers, phone numbers). Treat them as sensitive.
+- Images are stored only on the local machine and are **never** transmitted to a third-party service.
+- The `data/images/` directory is `.gitignore`d; **never** commit card images.
+- Image retention is controlled by `IMAGE_RETENTION_DAYS`. A future housekeeping job will enforce deletion.
+- CORS is restricted to `localhost` origins during development. Configure `ALLOWED_ORIGINS` explicitly for any deployment.
+- File uploads are validated for MIME type and size before being saved.
+- SQLite database files are `.gitignore`d.
+
+---
+
+## Milestone Plan
+
+See [docs/MILESTONES.md](docs/MILESTONES.md) for the complete, task-by-task plan.

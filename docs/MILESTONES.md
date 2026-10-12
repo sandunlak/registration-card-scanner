@@ -36,40 +36,30 @@ cd frontend && npm install && npm run dev  → http://localhost:3000
 
 ---
 
-## Milestone 2 — Database Models & Project Management
+## Milestone 2 — Database Models & Project Management ✅
 
-**Goal:** Define the full data model and expose CRUD APIs for Projects, Card Templates, and Cards.
+**Goal:** Implement a fully functional project-management and configurable-field system for a local-first registration card digitization application.
 
-### Tasks
+| Task | Done? |
+|------|-------|
+| SQLModel database models (`Project`, `ProjectField`, `RegistrationRecord`) | ✅ |
+| Phone numbers and IDs enforced as strings to preserve leading zeros | ✅ |
+| Alembic migration support (`alembic>=1.13.0`, migration revision generated & applied) | ✅ |
+| Native SQLite online backup & restore procedure (`docs/DATABASE_BACKUP.md`) | ✅ |
+| Project REST endpoints (`GET/POST /api/projects`, `GET/PATCH /api/projects/{id}`, archive & restore) | ✅ |
+| Field REST endpoints (`GET/POST /api/projects/{id}/fields`, `PATCH/DELETE /api/projects/{id}/fields/{fid}`, reorder) | ✅ |
+| Registration record REST endpoints with pagination (`GET/POST/PATCH /api/projects/{id}/records`) | ✅ |
+| Cross-project access protection (prevents ID tampering across projects) | ✅ |
+| Strict validation service for required and typed fields | ✅ |
+| Frontend professional dashboard (`page.tsx`) with metrics and project list | ✅ |
+| Create Project modal with presets (Enquiry Form, Admission Form, Blank) | ✅ |
+| Project detail page (`/projects/[id]`) with Records table, Field Layout editor, and Settings | ✅ |
+| Dynamic field management (add, edit, delete, move up/down) | ✅ |
+| Manual card record data entry modal dynamically driven by configured fields | ✅ |
+| Backend test suite with pytest (9 tests passing) | ✅ |
+| Frontend test suite with node:test & full TypeScript / ESLint compliance | ✅ |
 
-1. **SQLModel table definitions**
-   - `Project` — name, description, created_at, event_date
-   - `CardTemplate` — project_id, field definitions (JSON), layout hints
-   - `Card` — project_id, template_id, image_path, status (`pending | reviewed | exported`), created_at
-   - `CardField` — card_id, key, raw_value (`TEXT`), corrected_value (`TEXT | NULL`), confidence, needs_review
-
-   > **Rule:** `phone`, `passport_no`, `nic`, and all reference codes must be `String` columns.
-
-2. **Alembic migration setup** (or auto-create via SQLModel on startup for dev)
-
-3. **Routers**
-   - `GET/POST /api/v1/projects`
-   - `GET/PUT/DELETE /api/v1/projects/{id}`
-   - `GET/POST /api/v1/projects/{id}/templates`
-   - `GET /api/v1/projects/{id}/cards`
-
-4. **Pydantic schemas** matching every router
-
-5. **Tests**
-   - CRUD round-trip for Project and CardTemplate
-   - Verify phone stored as string, not coerced to int
-
-6. **Frontend stub pages**
-   - `/projects` — list all projects
-   - `/projects/new` — create project form
-   - `/projects/[id]` — project dashboard (card list)
-
-**Exit criteria:** `pytest` green; `npm run build` succeeds; project CRUD verified in browser.
+**Exit criteria:** `pytest` green; `npm run build` succeeds; project & field CRUD verified.
 
 ---
 

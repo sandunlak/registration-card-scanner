@@ -1,2 +1,5 @@
 """Models package — SQLModel ORM table definitions."""
-# Models are implemented in Milestone 2.
+
+from app.models.project import Project, ProjectField, RegistrationRecord
+
+__all__ = ["Project", "ProjectField", "RegistrationRecord"]

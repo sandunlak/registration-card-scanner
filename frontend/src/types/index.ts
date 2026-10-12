@@ -1,32 +1,122 @@
 /**
  * Shared TypeScript types for the Registration Card Scanner.
  *
- * These mirror the Pydantic schemas in backend/app/schemas/.
- * Populated in Milestone 2 when the card/project models are defined.
+ * Synchronized with backend SQLModel and Pydantic schemas.
  */
 
-/** Status returned by GET /health */
 export interface HealthResponse {
   status: string;
   version: string;
 }
 
-// ---------------------------------------------------------------------------
-// Placeholder types — fleshed out in Milestone 2
-// ---------------------------------------------------------------------------
+export type FieldType =
+  | "text"
+  | "phone"
+  | "email"
+  | "date"
+  | "number"
+  | "boolean"
+  | "single_select"
+  | "multi_select";
 
-export type ProjectId = string;
-export type CardId = string;
-export type TemplateId = string;
+export interface ValidationConfig {
+  options?: string[];
+  placeholder?: string;
+  help_text?: string;
+  min_value?: number;
+  max_value?: number;
+  min_length?: number;
+  max_length?: number;
+  pattern?: string;
+}
 
-/** Confidence score in the range [0, 1]. */
-export type ConfidenceScore = number;
+export interface ProjectField {
+  id: number;
+  project_id: number;
+  field_key: string;
+  field_label: string;
+  field_type: FieldType;
+  required: boolean;
+  display_order: number;
+  validation_config?: ValidationConfig | null;
+  created_at: string;
+  updated_at: string;
+}
 
-/** A single extracted field value with its confidence. */
-export interface ExtractedField {
-  key: string;
-  value: string | null;
-  confidence: ConfidenceScore;
-  /** True when confidence < OCR_CONFIDENCE_THRESHOLD and staff must review. */
-  needsReview: boolean;
+export interface ProjectFieldCreate {
+  field_key: string;
+  field_label: string;
+  field_type: FieldType;
+  required: boolean;
+  display_order?: number;
+  validation_config?: ValidationConfig | null;
+}
+
+export interface ProjectFieldUpdate {
+  field_label?: string;
+  field_type?: FieldType;
+  required?: boolean;
+  display_order?: number;
+  validation_config?: ValidationConfig | null;
+}
+
+export type ProjectStatus = "active" | "archived";
+
+export interface Project {
+  id: number;
+  name: string;
+  description?: string | null;
+  event_name?: string | null;
+  status: ProjectStatus;
+  created_at: string;
+  updated_at: string;
+  field_count?: number;
+  record_count?: number;
+  fields?: ProjectField[];
+}
+
+export interface ProjectCreate {
+  name: string;
+  description?: string | null;
+  event_name?: string | null;
+  fields?: ProjectFieldCreate[];
+}
+
+export interface ProjectUpdate {
+  name?: string;
+  description?: string | null;
+  event_name?: string | null;
+  status?: ProjectStatus;
+}
+
+export type RecordReviewStatus = "pending" | "reviewed" | "needs_review";
+
+export interface RegistrationRecord {
+  id: number;
+  project_id: number;
+  source_image_path?: string | null;
+  extracted_data: Record<string, unknown>;
+  review_status: RecordReviewStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RegistrationRecordCreate {
+  extracted_data: Record<string, unknown>;
+  review_status?: RecordReviewStatus;
+  source_image_path?: string | null;
+}
+
+export interface RegistrationRecordUpdate {
+  extracted_data?: Record<string, unknown>;
+  review_status?: RecordReviewStatus;
+  source_image_path?: string | null;
+}
+
+export interface RecordListResponse {
+  items: RegistrationRecord[];
+  total: number;
+  page: number;
+  limit: number;
+  pages: number;
 }

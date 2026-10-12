@@ -13,6 +13,7 @@ python-multipart>=0.0.9      # multipart/form-data file uploads
 sqlmodel>=0.0.21              # SQLModel = SQLAlchemy + Pydantic
 sqlalchemy[asyncio]>=2.0.14   # async extras (greenlet) required by SQLModel async
 aiosqlite>=0.20.0             # async SQLite driver
+alembic>=1.13.0               # database schema migrations
 
 # ---------------------------------------------------------------------------
 # Configuration

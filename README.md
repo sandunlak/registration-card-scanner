@@ -151,11 +151,16 @@ The UI is then available at **http://localhost:3000**
 | Command | Purpose |
 |---------|---------|
 | `uvicorn app.main:app --reload` | Start API with hot-reload |
-| `pytest` | Run all tests |
-| `pytest -v tests/test_health.py` | Run a single test module |
+| `pytest` | Run all tests (9 passing) |
+| `pytest -v tests/test_projects.py` | Run project & field CRUD tests |
+| `alembic upgrade head` | Run database schema migrations |
+| `python -m app.core.backup --action backup` | Safe online snapshot of SQLite database |
+| `python -m app.core.backup --action restore --file <path>` | Restore database snapshot |
 | `ruff check .` | Lint Python code |
 | `ruff format .` | Format Python code |
 | `mypy app/` | Type-check |
+
+See [`docs/DATABASE_BACKUP.md`](docs/DATABASE_BACKUP.md) for full backup and disaster recovery procedures.
 
 ### Frontend
 
@@ -164,7 +169,7 @@ The UI is then available at **http://localhost:3000**
 | `npm run dev` | Start Next.js dev server |
 | `npm run build` | Production build |
 | `npm run lint` | ESLint |
-| `npm test` | Jest unit tests (once configured) |
+| `npm test` | Node test runner (`node --test`) |
 
 ---
 

@@ -19,8 +19,8 @@ const FIELD_TYPES: { type: FieldType; label: string; desc: string }[] = [
   { type: "date", label: "Date", desc: "Calendar date (YYYY-MM-DD)" },
   { type: "number", label: "Number", desc: "Numeric count, age, scores" },
   { type: "boolean", label: "Yes / No Toggle", desc: "Consent, attendance, checklist" },
-  { type: "single_select", label: "Single Select Dropdown", desc: "Choose one from pre-defined options" },
-  { type: "multi_select", label: "Multi Select Checklist", desc: "Choose multiple options" },
+  { type: "single_select", label: "Single Choice (Radio Buttons)", desc: "Choose one option, or leave blank" },
+  { type: "multi_select", label: "Checkbox Group", desc: "Choose any marked options; leave unchecked if none" },
 ];
 
 export default function AddFieldModal({
@@ -236,7 +236,7 @@ export default function AddFieldModal({
           {(fieldType === "single_select" || fieldType === "multi_select") && (
             <div className="bg-indigo-500/5 border border-indigo-500/20 rounded-xl p-3.5 space-y-2">
               <label className="block text-xs font-semibold uppercase tracking-wider text-indigo-300">
-                Dropdown Options (Comma-Separated) <span className="text-red-400">*</span>
+                {fieldType === "multi_select" ? "Checkbox Options" : "Single-choice Options"} (Comma-Separated) <span className="text-red-400">*</span>
               </label>
               <textarea
                 rows={2}

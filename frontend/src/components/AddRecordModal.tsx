@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createProjectRecord, updateProjectRecord } from "@/lib/api/projects";
+import { createRecordFormData, serializeRecordFormData } from "@/lib/recordForm";
 import type {
   ProjectField,
   RegistrationRecord,
@@ -25,16 +26,9 @@ export default function AddRecordModal({
   onRecordSaved,
   editingRecord,
 }: AddRecordModalProps) {
-  const [formData, setFormData] = useState<Record<string, unknown>>(() => {
-    if (editingRecord) return editingRecord.extracted_data || {};
-    const initial: Record<string, unknown> = {};
-    fields.forEach((f) => {
-      if (f.field_type === "boolean") initial[f.field_key] = false;
-      else if (f.field_type === "multi_select") initial[f.field_key] = [];
-      else initial[f.field_key] = "";
-    });
-    return initial;
-  });
+  const [formData, setFormData] = useState<Record<string, unknown>>(() =>
+    createRecordFormData(fields, editingRecord?.extracted_data)
+  );
 
   const [reviewStatus, setReviewStatus] = useState<RecordReviewStatus>(
     editingRecord?.review_status ?? "pending"
@@ -65,19 +59,7 @@ export default function AddRecordModal({
     setIsSubmitting(true);
     setError(null);
 
-    // Build payload ensuring string values for phone numbers and IDs
-    const cleanedData: Record<string, unknown> = {};
-    for (const f of fields) {
-      const val = formData[f.field_key];
-      if (val === undefined || val === "") {
-        cleanedData[f.field_key] = null;
-      } else if (f.field_type === "phone") {
-        // Enforce string to preserve leading zeros
-        cleanedData[f.field_key] = String(val).trim();
-      } else {
-        cleanedData[f.field_key] = val;
-      }
-    }
+    const cleanedData = serializeRecordFormData(fields, formData);
 
     try {
       if (editingRecord) {
@@ -213,44 +195,39 @@ export default function AddRecordModal({
                         </span>
                       </label>
                     ) : field.field_type === "single_select" ? (
-                      <select
-                        required={field.required}
-                        value={val}
-                        onChange={(e) => handleChange(key, e.target.value)}
-                        className="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500"
-                      >
-                        <option value="">-- Select an option --</option>
-                        {field.validation_config?.options?.map((opt) => (
-                          <option key={opt} value={opt}>
-                            {opt}
-                          </option>
+                      <fieldset className="space-y-2 rounded-lg border border-slate-700 bg-slate-800/40 p-3">
+                        <legend className="sr-only">{field.field_label}</legend>
+                        {field.validation_config?.options?.map((option) => (
+                          <label key={option} className="flex cursor-pointer items-center gap-2 text-sm text-slate-200">
+                            <input
+                              type="radio"
+                              name={key}
+                              value={option}
+                              required={field.required}
+                              checked={formData[key] === option}
+                              onChange={() => handleChange(key, option)}
+                              className="h-4 w-4 accent-indigo-500"
+                            />
+                            <span>{option}</span>
+                          </label>
                         ))}
-                      </select>
+                      </fieldset>
                     ) : field.field_type === "multi_select" ? (
-                      <div className="bg-slate-800/40 border border-slate-700/80 rounded-xl p-3">
-                        <div className="flex flex-wrap gap-2">
-                          {field.validation_config?.options?.map((opt) => {
-                            const selected =
-                              Array.isArray(formData[key]) &&
-                              (formData[key] as string[]).includes(opt);
-                            return (
-                              <button
-                                key={opt}
-                                type="button"
-                                onClick={() => handleMultiSelectToggle(key, opt)}
-                                className={`text-xs px-2.5 py-1 rounded-lg border transition-all ${
-                                  selected
-                                    ? "bg-indigo-600 text-white border-indigo-500"
-                                    : "bg-slate-800 text-slate-400 border-slate-700 hover:text-white"
-                                }`}
-                              >
-                                {selected ? "✓ " : "+ "}
-                                {opt}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
+                      <fieldset className="space-y-2 rounded-lg border border-slate-700 bg-slate-800/40 p-3">
+                        <legend className="sr-only">{field.field_label}</legend>
+                        {field.validation_config?.options?.map((option) => (
+                          <label key={option} className="flex cursor-pointer items-center gap-2 text-sm text-slate-200">
+                            <input
+                              type="checkbox"
+                              checked={Array.isArray(formData[key]) && (formData[key] as string[]).includes(option)}
+                              onChange={() => handleMultiSelectToggle(key, option)}
+                              className="h-4 w-4 rounded accent-indigo-500"
+                            />
+                            <span>{option}</span>
+                          </label>
+                        ))}
+                        <p className="text-xs text-slate-400">Leave all unchecked if no option is marked on the card.</p>
+                      </fieldset>
                     ) : (
                       <input
                         type="text"

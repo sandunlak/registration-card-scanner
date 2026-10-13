@@ -1,7 +1,8 @@
 "use client";
 
-import { use, useEffect, useState, useCallback, Suspense } from "react";
+import { useEffect, useState, useCallback, Suspense } from "react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import AddFieldModal from "@/components/AddFieldModal";
 import AddRecordModal from "@/components/AddRecordModal";
@@ -24,13 +25,9 @@ import type {
   RecordListResponse,
 } from "@/types";
 
-interface PageProps {
-  params: Promise<{ id: string }>;
-}
-
-function ProjectDetailContent({ params }: PageProps) {
-  const resolvedParams = use(params);
-  const projectId = parseInt(resolvedParams.id, 10);
+function ProjectDetailContent() {
+  const { id } = useParams<{ id: string }>();
+  const projectId = parseInt(id, 10);
 
   const [project, setProject] = useState<Project | null>(null);
   const [fields, setFields] = useState<ProjectField[]>([]);
@@ -480,7 +477,7 @@ function ProjectDetailContent({ params }: PageProps) {
                             const val = record.extracted_data[f.field_key];
                             return (
                               <td key={f.id} className="py-3 px-4 font-medium text-slate-200">
-                                {val === null || val === undefined || val === "" ? (
+                                {val === null || val === undefined || val === "" || (Array.isArray(val) && val.length === 0) ? (
                                   <span className="text-slate-600">—</span>
                                 ) : Array.isArray(val) ? (
                                   val.join(", ")
@@ -785,33 +782,35 @@ function ProjectDetailContent({ params }: PageProps) {
         }}
       />
 
-      <AddRecordModal
-        projectId={projectId}
-        fields={fields}
-        isOpen={isRecordModalOpen}
-        editingRecord={editingRecord}
-        onClose={() => {
-          setIsRecordModalOpen(false);
-          setEditingRecord(null);
-        }}
-        onRecordSaved={(saved) => {
-          setRecordsResponse((prev) => {
-            if (!prev) return null;
-            const exists = prev.items.some((r) => r.id === saved.id);
-            if (exists) {
+      {isRecordModalOpen && (
+        <AddRecordModal
+          projectId={projectId}
+          fields={fields}
+          isOpen={isRecordModalOpen}
+          editingRecord={editingRecord}
+          onClose={() => {
+            setIsRecordModalOpen(false);
+            setEditingRecord(null);
+          }}
+          onRecordSaved={(saved) => {
+            setRecordsResponse((prev) => {
+              if (!prev) return null;
+              const exists = prev.items.some((r) => r.id === saved.id);
+              if (exists) {
+                return {
+                  ...prev,
+                  items: prev.items.map((r) => (r.id === saved.id ? saved : r)),
+                };
+              }
               return {
                 ...prev,
-                items: prev.items.map((r) => (r.id === saved.id ? saved : r)),
+                total: prev.total + 1,
+                items: [saved, ...prev.items],
               };
-            }
-            return {
-              ...prev,
-              total: prev.total + 1,
-              items: [saved, ...prev.items],
-            };
-          });
-        }}
-      />
+            });
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -828,10 +827,10 @@ function ProjectDetailSkeleton() {
   );
 }
 
-export default function ProjectDetailPage({ params }: PageProps) {
+export default function ProjectDetailPage() {
   return (
     <Suspense fallback={<ProjectDetailSkeleton />}>
-      <ProjectDetailContent params={params} />
+      <ProjectDetailContent />
     </Suspense>
   );
 }

@@ -7,10 +7,13 @@
 
 import type { HealthResponse } from "@/types";
 
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const BASE = "";
 
 export async function getHealth(): Promise<HealthResponse> {
-  const res = await fetch(`${BASE}/health`, { cache: "no-store" });
+  const res = await fetch(`${BASE}/health`, {
+    cache: "no-store",
+    signal: AbortSignal.timeout(3000),
+  });
   if (!res.ok) {
     throw new Error(`Health check failed: ${res.status}`);
   }

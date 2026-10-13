@@ -193,7 +193,9 @@ See [`docs/IMAGE_WORKFLOW.md`](docs/IMAGE_WORKFLOW.md) for upload endpoints, ima
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `NEXT_PUBLIC_API_URL` | `http://localhost:8000` | Backend API base URL |
+| `API_SERVER_URL` | `http://127.0.0.1:8000` | Private FastAPI origin used by the Next.js same-origin proxy |
+| `NEXT_PUBLIC_API_URL` | unset | Legacy fallback for the FastAPI origin; prefer `API_SERVER_URL` |
+| `NEXT_ALLOWED_DEV_ORIGINS` | `10.69.1.115` | Comma-separated LAN hostnames allowed to load Next.js development assets |
 
 > **Rule:** Never commit `.env` or `.env.local` files. Only commit `.env.example` / `.env.local.example`.
 

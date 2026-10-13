@@ -17,7 +17,7 @@ import type {
   ImageAdjust,
 } from "@/types";
 
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const BASE = "";
 
 async function handleResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
@@ -40,11 +40,8 @@ async function handleResponse<T>(res: Response): Promise<T> {
 // ---------------------------------------------------------------------------
 
 export async function getProjects(status?: string): Promise<Project[]> {
-  const url = new URL(`${BASE}/api/projects`);
-  if (status) {
-    url.searchParams.set("status", status);
-  }
-  const res = await fetch(url.toString(), { cache: "no-store" });
+  const query = status ? `?${new URLSearchParams({ status }).toString()}` : "";
+  const res = await fetch(`${BASE}/api/projects${query}`, { cache: "no-store" });
   return handleResponse<Project[]>(res);
 }
 
@@ -153,13 +150,12 @@ export async function getProjectRecords(
   limit: number = 20,
   reviewStatus?: string
 ): Promise<RecordListResponse> {
-  const url = new URL(`${BASE}/api/projects/${projectId}/records`);
-  url.searchParams.set("page", String(page));
-  url.searchParams.set("limit", String(limit));
-  if (reviewStatus) {
-    url.searchParams.set("review_status", reviewStatus);
-  }
-  const res = await fetch(url.toString(), { cache: "no-store" });
+  const query = new URLSearchParams({ page: String(page), limit: String(limit) });
+  if (reviewStatus) query.set("review_status", reviewStatus);
+  const res = await fetch(
+    `${BASE}/api/projects/${projectId}/records?${query.toString()}`,
+    { cache: "no-store" }
+  );
   return handleResponse<RecordListResponse>(res);
 }
 
@@ -204,10 +200,9 @@ export function getImagePreviewUrl(
   variant: string,
   updatedAt?: string
 ): string {
-  const url = new URL(`${BASE}/api/projects/${projectId}/images/${imageId}/preview`);
-  url.searchParams.set("variant", variant);
-  if (updatedAt) url.searchParams.set("v", updatedAt);
-  return url.toString();
+  const query = new URLSearchParams({ variant });
+  if (updatedAt) query.set("v", updatedAt);
+  return `${BASE}/api/projects/${projectId}/images/${imageId}/preview?${query.toString()}`;
 }
 
 export function uploadProjectImage(

@@ -1,32 +1,33 @@
-/**
- * HealthBadge — pings the backend /health endpoint and shows a coloured
- * status indicator in the nav bar.
- *
- * Uses React Server Component fetch with no-store so every page load
- * reflects the real backend status.
- */
+"use client";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+import { useEffect, useState } from "react";
+import { getHealth } from "@/lib/api/health";
+import type { HealthResponse } from "@/types";
 
-type HealthData = { status: string; version: string };
+export default function HealthBadge() {
+  const [data, setData] = useState<HealthResponse | null>(null);
+  const [checked, setChecked] = useState(false);
 
-async function fetchHealth(): Promise<HealthData | null> {
-  try {
-    const res = await fetch(`${API_URL}/health`, {
-      cache: "no-store",
-      // Short timeout — if the backend isn't up we still want the page to render
-      signal: AbortSignal.timeout(2000),
-    });
-    if (!res.ok) return null;
-    return (await res.json()) as HealthData;
-  } catch {
-    return null;
-  }
-}
+  useEffect(() => {
+    let ignore = false;
+    getHealth()
+      .then((response) => {
+        if (!ignore) setData(response);
+      })
+      .catch(() => {
+        if (!ignore) setData(null);
+      })
+      .finally(() => {
+        if (!ignore) setChecked(true);
+      });
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
-export default async function HealthBadge() {
-  const data = await fetchHealth();
   const online = data?.status === "ok";
+
+  if (!checked) return <HealthBadgeFallback />;
 
   return (
     <div

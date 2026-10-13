@@ -120,3 +120,33 @@ export interface RecordListResponse {
   limit: number;
   pages: number;
 }
+
+export type ImageProcessingStatus = "uploaded" | "processing" | "ready" | "failed";
+
+export interface ImageMetadata {
+  width: number;
+  height: number;
+  original_width: number;
+  original_height: number;
+  boundary_detected: boolean;
+  quality_warnings: string[];
+}
+
+export interface ImageAsset {
+  id: number;
+  project_id: number;
+  record_id: number;
+  status: ImageProcessingStatus;
+  metadata: ImageMetadata;
+  variants: string[];
+  rotation: 0 | 90 | 180 | 270;
+  crop: { x: number; y: number; width: number; height: number } | null;
+  error_message: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ImageAdjust {
+  rotation: 0 | 90 | 180 | 270;
+  crop?: { x: number; y: number; width: number; height: number } | null;
+}

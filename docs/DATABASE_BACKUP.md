@@ -26,6 +26,8 @@ python -m app.core.backup --action backup
 Snapshots are timestamped and saved into `backend/data/backups/`:
 `backend/data/backups/app_backup_YYYYMMDD_HHMMSS.db`
 
+This utility backs up SQLite only. Card images live separately in `IMAGES_DIR`; make a secure backup of that directory as well and restore it alongside the matching database snapshot. See [IMAGE_WORKFLOW.md](IMAGE_WORKFLOW.md) for storage and retention details.
+
 You can also specify a custom output directory:
 
 ```powershell

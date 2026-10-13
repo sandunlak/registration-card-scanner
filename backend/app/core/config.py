@@ -18,7 +18,9 @@ class Settings(BaseSettings):
     # Image storage
     images_dir: str = "./data/images"
     max_upload_size_mb: int = 20
-    allowed_mime_types: str = "image/jpeg,image/png,image/webp,image/tiff"
+    allowed_mime_types: str = "image/jpeg,image/png,image/webp"
+    max_image_pixels: int = 40_000_000
+    max_images_per_batch: int = 10
 
     # Privacy
     image_retention_days: int = 90

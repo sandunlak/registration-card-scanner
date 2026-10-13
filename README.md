@@ -32,9 +32,9 @@ FastAPI  (Python)
 ```
 
 - **Frontend** — Next.js 15 App Router, TypeScript, Tailwind CSS.  Displays the review queue, confidence heat-map overlay, and project/template management.
-- **Backend** — Python 3.11+, FastAPI.  All OCR (PaddleOCR + handwriting model) runs here; the frontend never touches images directly.
+- **Backend** — Python 3.11+, FastAPI. Image validation and preprocessing run locally; OCR is not part of the current image workflow.
 - **Database** — SQLite (single file, zero-admin).  Phone numbers and all identifiers stored as `TEXT`.
-- **Image storage** — Original card images stored under `backend/data/images/originals/<project_id>/` with configurable retention.  Thumbnails under `thumbnails/`.
+- **Image storage** — Original, processed, and optional preprocessing variants are stored under the configured private `IMAGES_DIR`, scoped by project and registration record.
 - **Export** — `openpyxl` generates `.xlsx` files on demand.
 
 ---
@@ -161,6 +161,7 @@ The UI is then available at **http://localhost:3000**
 | `mypy app/` | Type-check |
 
 See [`docs/DATABASE_BACKUP.md`](docs/DATABASE_BACKUP.md) for full backup and disaster recovery procedures.
+See [`docs/IMAGE_WORKFLOW.md`](docs/IMAGE_WORKFLOW.md) for upload endpoints, image storage, retention, and privacy details.
 
 ### Frontend
 
@@ -180,8 +181,10 @@ See [`docs/DATABASE_BACKUP.md`](docs/DATABASE_BACKUP.md) for full backup and dis
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `DATABASE_URL` | `sqlite:///./data/db/app.db` | SQLite connection string |
-| `IMAGES_DIR` | `./data/images` | Root for original + thumbnail images |
+| `IMAGES_DIR` | `./data/images` | Private root for original, processed, and variant images |
 | `MAX_UPLOAD_SIZE_MB` | `20` | Per-image upload limit |
+| `MAX_IMAGE_PIXELS` | `40000000` | Maximum decoded pixels per image |
+| `MAX_IMAGES_PER_BATCH` | `10` | Maximum files in one batch request |
 | `IMAGE_RETENTION_DAYS` | `90` | Days before originals are eligible for deletion |
 | `LOG_LEVEL` | `INFO` | Python logging level |
 | `ALLOWED_ORIGINS` | `http://localhost:3000` | CORS origins (comma-separated) |
@@ -233,8 +236,11 @@ See [`docs/DATABASE_BACKUP.md`](docs/DATABASE_BACKUP.md) for full backup and dis
 - The `data/images/` directory is `.gitignore`d; **never** commit card images.
 - Image retention is controlled by `IMAGE_RETENTION_DAYS`. A future housekeeping job will enforce deletion.
 - CORS is restricted to `localhost` origins during development. Configure `ALLOWED_ORIGINS` explicitly for any deployment.
-- File uploads are validated for MIME type and size before being saved.
+- File uploads are validated by extension, declared MIME type when present, decoded format, byte size, and decoded pixel dimensions before being saved.
+- Authentication is not implemented. The local development environment is not ready to expose to an untrusted network, even though image routes enforce project scoping.
 - SQLite database files are `.gitignore`d.
+
+Image files and retention limitations are described in [`docs/IMAGE_WORKFLOW.md`](docs/IMAGE_WORKFLOW.md).
 
 ---
 

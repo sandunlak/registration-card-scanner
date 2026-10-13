@@ -16,7 +16,7 @@ from fastapi.responses import JSONResponse
 from app.core.config import settings
 from app.core.database import create_db_and_tables
 from app.core.exceptions import AppError
-from app.routers import fields, health, projects, records
+from app.routers import fields, health, images, projects, records
 
 logger = logging.getLogger(__name__)
 
@@ -79,8 +79,10 @@ app.include_router(health.router)
 app.include_router(projects.router, prefix="/api/projects")
 app.include_router(fields.router, prefix="/api/projects")
 app.include_router(records.router, prefix="/api/projects")
+app.include_router(images.router, prefix="/api/projects")
 
 # Alias /api/v1/projects for backwards compatibility
 app.include_router(projects.router, prefix="/api/v1/projects")
 app.include_router(fields.router, prefix="/api/v1/projects")
 app.include_router(records.router, prefix="/api/v1/projects")
+app.include_router(images.router, prefix="/api/v1/projects")

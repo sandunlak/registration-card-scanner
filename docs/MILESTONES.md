@@ -63,33 +63,24 @@ cd frontend && npm install && npm run dev  → http://localhost:3000
 
 ---
 
-## Milestone 3 — Image Upload & Storage
+## Milestone 3 — Mobile Image Capture and Preprocessing ✅
 
-**Goal:** Staff can upload card images; the backend validates, stores, and thumbnails them.
+**Goal:** Staff can capture or upload private card images, review preprocessing and quality warnings, and make manual corrections without OCR.
 
-### Tasks
+| Task | Done? |
+|------|-------|
+| JPEG, PNG, and WebP verification by extension, MIME, and decoded contents | ✅ |
+| Bounded upload reads, per-file size limits, batch count, and decoded pixel limits | ✅ |
+| EXIF normalization, best-effort boundary detection, and perspective correction | ✅ |
+| Separate color output and reusable grayscale, denoise, contrast, and threshold variants | ✅ |
+| Quality warnings for resolution, blur, lighting, contrast, crop edges, and detection | ✅ |
+| Project/record-scoped UUID storage and additive image metadata migration | ✅ |
+| Upload one or many, metadata, private previews, retry, adjust, replace, and delete APIs | ✅ |
+| Mobile camera capture, multi-select, per-image progress, preview, crop, rotate, and lifecycle UI | ✅ |
+| Tests for validation, preprocessing, project isolation, cleanup, retry, deletion, and legacy DB data | ✅ |
+| Endpoint, backup, retention, and security documentation | ✅ |
 
-1. `POST /api/v1/projects/{id}/cards/upload` — multipart upload
-   - Validate MIME type against `ALLOWED_MIME_TYPES`
-   - Validate size against `MAX_UPLOAD_SIZE_MB`
-   - Save original to `data/images/originals/<project_id>/<uuid>.<ext>`
-   - Generate 400 px thumbnail with Pillow → `data/images/thumbnails/…`
-   - Create `Card` DB record with `status="pending"`
-
-2. `GET /api/v1/cards/{id}/image` — serve original (access-controlled)
-3. `GET /api/v1/cards/{id}/thumbnail` — serve thumbnail
-
-4. **Frontend**
-   - Drag-and-drop upload zone on the project dashboard
-   - Progress indicator per file
-   - Thumbnail grid of uploaded cards
-
-5. **Tests**
-   - Upload a valid JPEG — assert 201, file on disk, thumbnail created
-   - Upload oversized file — assert 413
-   - Upload wrong MIME — assert 415
-
-**Exit criteria:** Upload 5 test images via UI; thumbnails appear in grid; originals on disk.
+**Exit criteria:** Verified by backend and frontend test suites and production build. Images remain local; OCR is not integrated in this milestone.
 
 ---
 

@@ -5,6 +5,7 @@ import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import AddFieldModal from "@/components/AddFieldModal";
 import AddRecordModal from "@/components/AddRecordModal";
+import ImagesWorkspace from "@/components/ImagesWorkspace";
 import {
   getProject,
   updateProject,
@@ -37,7 +38,7 @@ function ProjectDetailContent({ params }: PageProps) {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"records" | "fields" | "settings">("records");
+  const [activeTab, setActiveTab] = useState<"records" | "fields" | "images" | "settings">("records");
 
   // Record filtering & pagination
   const [recordPage, setRecordPage] = useState(1);
@@ -343,11 +344,12 @@ function ProjectDetailContent({ params }: PageProps) {
               label: `Fields & Card Layout (${fields.length})`,
               icon: "⚙️",
             },
+            { id: "images", label: "Images", icon: "▧" },
             { id: "settings", label: "Project Settings", icon: "🛠️" },
           ].map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as "records" | "fields" | "settings")}
+              onClick={() => setActiveTab(tab.id as "records" | "fields" | "images" | "settings")}
               className={`px-4 py-3 text-xs sm:text-sm font-medium border-b-2 transition-all flex items-center gap-2 -mb-px ${
                 activeTab === tab.id
                   ? "border-indigo-500 text-indigo-400"
@@ -759,6 +761,8 @@ function ProjectDetailContent({ params }: PageProps) {
             </form>
           </div>
         )}
+
+        {activeTab === "images" && <ImagesWorkspace projectId={projectId} />}
       </main>
 
       {/* Modals */}

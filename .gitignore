@@ -41,7 +41,11 @@ backend/data/backups/
 
 # Card images (sensitive personal data — never commit)
 backend/data/images/
+backend/data/models/
+backend/data/ocr-evaluation/
 data/images/
+data/models/
+data/ocr-evaluation/
 uploads/
 tmp/
 temp/
@@ -58,6 +62,7 @@ desktop.ini
 # Node / Next.js
 node_modules/
 .next/
+.next-ocr-build/
 out/
 dist/
 .npm

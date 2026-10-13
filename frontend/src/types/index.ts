@@ -150,3 +150,45 @@ export interface ImageAdjust {
   rotation: 0 | 90 | 180 | 270;
   crop?: { x: number; y: number; width: number; height: number } | null;
 }
+
+export type OcrJobStatus = "queued" | "processing" | "completed" | "failed";
+
+export interface OcrJob {
+  id: number;
+  project_id: number;
+  image_id: number;
+  status: OcrJobStatus;
+  error_code: string | null;
+  error_message: string | null;
+  attempt_count: number;
+  duration_ms: number | null;
+  result_count: number;
+  requested_at: string;
+  started_at: string | null;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OcrResult {
+  id: number;
+  job_id: number;
+  image_id: number;
+  region_index: number;
+  text: string;
+  polygon: number[][];
+  coordinate_space: "processed";
+  image_width: number;
+  image_height: number;
+  recognition_type: "printed" | "handwritten";
+  model_id: string;
+  model_version: string;
+  confidence: number | null;
+  extra_metadata: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface OcrResultsResponse {
+  job: OcrJob;
+  items: OcrResult[];
+}

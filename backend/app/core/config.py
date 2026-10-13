@@ -21,6 +21,8 @@ class Settings(BaseSettings):
     allowed_mime_types: str = "image/jpeg,image/png,image/webp"
     max_image_pixels: int = 40_000_000
     max_images_per_batch: int = 10
+    ocr_models_dir: str = "./data/models/ocr"
+    ocr_max_handwriting_regions: int = 20
 
     # Privacy
     image_retention_days: int = 90

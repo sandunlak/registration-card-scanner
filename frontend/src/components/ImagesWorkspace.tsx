@@ -7,11 +7,15 @@ import {
   deleteProjectImage,
   getImagePreviewUrl,
   getProjectImages,
+  getProjectImageOcrJob,
+  getProjectImageOcrResults,
   replaceProjectImage,
+  retryProjectImageOcr,
   retryImagePreprocessing,
+  startProjectImageOcr,
   uploadProjectImage,
 } from "@/lib/api/projects";
-import type { ImageAsset, ImageAdjust } from "@/types";
+import type { ImageAsset, ImageAdjust, OcrJob, OcrResult } from "@/types";
 
 interface ImagesWorkspaceProps {
   projectId: number;
@@ -64,9 +68,17 @@ export default function ImagesWorkspace({ projectId }: ImagesWorkspaceProps) {
   const [operationNotice, setOperationNotice] = useState<string | null>(null);
   const [busyImageId, setBusyImageId] = useState<number | null>(null);
   const [replaceProgress, setReplaceProgress] = useState<number | null>(null);
+  const [ocrJob, setOcrJob] = useState<OcrJob | null>(null);
+  const [ocrResults, setOcrResults] = useState<OcrResult[]>([]);
+  const [ocrLoading, setOcrLoading] = useState(false);
+  const [ocrBusy, setOcrBusy] = useState(false);
+  const [ocrError, setOcrError] = useState<string | null>(null);
+  const [handwritingMode, setHandwritingMode] = useState(false);
+  const [handwritingCrop, setHandwritingCrop] = useState<CropSelection | null>(null);
   const replaceInput = useRef<HTMLInputElement>(null);
   const nextUploadId = useRef(0);
   const dragStart = useRef<{ x: number; y: number } | null>(null);
+  const dragMode = useRef<"crop" | "handwriting" | null>(null);
 
   const loadImages = useCallback(async () => {
     setPageError(null);
@@ -88,6 +100,80 @@ export default function ImagesWorkspace({ projectId }: ImagesWorkspaceProps) {
   }, [loadImages]);
 
   const selected = images.find((image) => image.id === selectedId) ?? null;
+
+  useEffect(() => {
+    if (selectedId === null) return;
+    let ignore = false;
+    setOcrLoading(true);
+    setOcrError(null);
+    getProjectImageOcrJob(projectId, selectedId)
+      .then(async (job) => {
+        if (ignore) return;
+        if (!job) {
+          setOcrJob(null);
+          setOcrResults([]);
+          return;
+        }
+        setOcrJob(job);
+        if (job.status === "completed") {
+          const response = await getProjectImageOcrResults(projectId, selectedId, job.id);
+          if (!ignore) setOcrResults(response.items);
+        } else {
+          setOcrResults([]);
+        }
+      })
+      .catch((error: unknown) => {
+        if (ignore) return;
+        if (error instanceof Error && error.message.includes("404")) {
+          setOcrJob(null);
+          setOcrResults([]);
+        } else {
+          setOcrError(imageError(error, "Could not load OCR status."));
+        }
+      })
+      .finally(() => {
+        if (!ignore) setOcrLoading(false);
+      });
+    return () => {
+      ignore = true;
+    };
+  }, [projectId, selectedId]);
+
+  const pollingJobId = ocrJob?.id;
+  const pollingJobStatus = ocrJob?.status;
+
+  useEffect(() => {
+    if (
+      selectedId === null
+      || pollingJobId === undefined
+      || pollingJobStatus === undefined
+      || !["queued", "processing"].includes(pollingJobStatus)
+    ) return;
+    let ignore = false;
+    const timer = window.setInterval(() => {
+      getProjectImageOcrJob(projectId, selectedId)
+        .then(async (job) => {
+          if (ignore) return;
+          if (!job) {
+            setOcrJob(null);
+            setOcrResults([]);
+            return;
+          }
+          setOcrJob(job);
+          if (job.status === "completed") {
+            const response = await getProjectImageOcrResults(projectId, selectedId, job.id);
+            if (!ignore) setOcrResults(response.items);
+          }
+        })
+        .catch((error: unknown) => {
+          if (!ignore) setOcrError(imageError(error, "Could not refresh OCR status."));
+        });
+    }, 1200);
+    return () => {
+      ignore = true;
+      window.clearInterval(timer);
+    };
+  }, [projectId, selectedId, pollingJobId, pollingJobStatus]);
 
   useEffect(() => {
     setRotation(selected?.rotation ?? 0);
@@ -155,26 +241,57 @@ export default function ImagesWorkspace({ projectId }: ImagesWorkspaceProps) {
   };
 
   const onCropStart = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (preview !== "original" || !selected) return;
+    if (!selected) return;
+    if (handwritingMode && preview !== "processed") return;
+    if (!handwritingMode && preview !== "original") return;
     const point = pointFromEvent(event);
     dragStart.current = point;
-    setCrop({ ...point, width: 0, height: 0 });
+    dragMode.current = handwritingMode ? "handwriting" : "crop";
+    if (handwritingMode) setHandwritingCrop({ ...point, width: 0, height: 0 });
+    else setCrop({ ...point, width: 0, height: 0 });
     event.currentTarget.setPointerCapture(event.pointerId);
   };
 
   const onCropMove = (event: React.PointerEvent<HTMLDivElement>) => {
     if (!dragStart.current) return;
     const point = pointFromEvent(event);
-    setCrop({
+    const selection = {
       x: Math.min(dragStart.current.x, point.x),
       y: Math.min(dragStart.current.y, point.y),
       width: Math.abs(point.x - dragStart.current.x),
       height: Math.abs(point.y - dragStart.current.y),
-    });
+    };
+    if (dragMode.current === "handwriting") setHandwritingCrop(selection);
+    else setCrop(selection);
   };
 
   const onCropEnd = () => {
     dragStart.current = null;
+    dragMode.current = null;
+  };
+
+  const runOcr = async (retry = false) => {
+    if (!selected) return;
+    setOcrBusy(true);
+    setOcrError(null);
+    setOcrResults([]);
+    try {
+      const cropForRequest = handwritingCrop && handwritingCrop.width > 0.02 && handwritingCrop.height > 0.02
+        ? [handwritingCrop]
+        : [];
+      const job = retry && ocrJob
+        ? await retryProjectImageOcr(projectId, selected.id, ocrJob.id)
+        : await startProjectImageOcr(projectId, selected.id, cropForRequest);
+      setOcrJob(job);
+      if (job.status === "completed") {
+        const response = await getProjectImageOcrResults(projectId, selected.id, job.id);
+        setOcrResults(response.items);
+      }
+    } catch (error: unknown) {
+      setOcrError(imageError(error, "OCR could not be started."));
+    } finally {
+      setOcrBusy(false);
+    }
   };
 
   const applyAdjustment = () => {
@@ -354,6 +471,60 @@ export default function ImagesWorkspace({ projectId }: ImagesWorkspaceProps) {
               )}
               {selected.status === "failed" && selected.error_message && <p role="alert" className="text-xs text-red-300">{selected.error_message}</p>}
 
+              <div className="space-y-3 border-y border-slate-800 py-4" aria-label="OCR recognition">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h4 className="text-sm font-semibold text-white">Text recognition</h4>
+                    <p className="mt-1 text-xs text-slate-400">Results are suggestions for staff review and are not mapped to project fields.</p>
+                  </div>
+                  <div className="flex gap-2">
+                    {ocrJob?.status === "failed" ? (
+                      <button type="button" onClick={() => void runOcr(true)} disabled={ocrBusy} className="rounded-md border border-amber-700 px-3 py-2 text-xs font-semibold text-amber-200 hover:bg-amber-950/40 disabled:opacity-50">{ocrBusy ? "Retrying…" : "Retry OCR"}</button>
+                    ) : (
+                      <button type="button" onClick={() => void runOcr()} disabled={ocrBusy || ocrLoading || ocrJob?.status === "queued" || ocrJob?.status === "processing" || selected.status !== "ready"} className="rounded-md bg-indigo-600 px-3 py-2 text-xs font-semibold text-white hover:bg-indigo-500 disabled:opacity-50">{ocrBusy ? "Starting…" : "Run OCR"}</button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPreview("processed");
+                      setHandwritingMode((active) => !active);
+                      setHandwritingCrop(null);
+                    }}
+                    aria-pressed={handwritingMode}
+                    className={`rounded-md border px-2.5 py-1.5 text-xs ${handwritingMode ? "border-amber-500 bg-amber-950/40 text-amber-100" : "border-slate-700 text-slate-300 hover:bg-slate-800"}`}
+                  >
+                    {handwritingMode ? "Cancel handwriting crop" : "Select handwriting line"}
+                  </button>
+                  <span className="text-xs text-slate-400">
+                    {handwritingMode ? "Drag around one handwriting line on the processed image; TrOCR runs only for this crop." : handwritingCrop ? "1 handwriting line selected" : "Handwriting crop is optional."}
+                  </span>
+                </div>
+
+                {ocrError && <p role="alert" className="text-xs text-red-300">{ocrError}</p>}
+                {ocrJob && (
+                  <div className="space-y-2">
+                    <p className={`text-xs ${ocrJob.status === "failed" ? "text-red-300" : ocrJob.status === "completed" ? "text-emerald-300" : "text-amber-200"}`}>
+                      OCR {ocrJob.status}{ocrJob.duration_ms !== null ? ` · ${ocrJob.duration_ms} ms` : ""}
+                    </p>
+                    {ocrJob.error_message && <p className="text-xs text-red-300">{ocrJob.error_message}</p>}
+                    {ocrResults.map((result) => (
+                      <div key={result.id} className="grid gap-1 border-l-2 border-slate-600 bg-slate-900/70 px-3 py-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+                        <p className="break-words text-sm text-slate-100">{result.text || "(No text recognized)"}</p>
+                        <p className="text-[11px] text-slate-400">
+                          {result.recognition_type} · {result.confidence === null ? "confidence unavailable" : `${(result.confidence * 100).toFixed(1)}% model score`}
+                        </p>
+                      </div>
+                    ))}
+                    {ocrJob.status === "completed" && ocrResults.length === 0 && <p className="text-xs text-slate-400">No text regions were recognized.</p>}
+                    {ocrJob.status === "completed" && ocrResults.some((result) => result.confidence !== null) && <p className="text-[11px] text-slate-500">Scores are model outputs, not guarantees of correctness.</p>}
+                  </div>
+                )}
+              </div>
+
               <div className="flex flex-wrap items-center gap-2 border-b border-slate-800 pb-3">
                 <div role="group" aria-label="Preview version" className="inline-flex border border-slate-700">
                   {["original", "processed", ...selected.variants].map((variant) => (
@@ -370,7 +541,7 @@ export default function ImagesWorkspace({ projectId }: ImagesWorkspaceProps) {
 
               <div className="flex min-h-64 justify-center overflow-auto bg-black/40 p-3">
                 <div
-                  className={`relative inline-block self-center ${preview === "original" ? "cursor-crosshair touch-none" : ""}`}
+                  className={`relative inline-block self-center ${(preview === "original" || handwritingMode) ? "cursor-crosshair touch-none" : ""}`}
                   onPointerDown={onCropStart}
                   onPointerMove={onCropMove}
                   onPointerUp={onCropEnd}
@@ -390,11 +561,21 @@ export default function ImagesWorkspace({ projectId }: ImagesWorkspaceProps) {
                       style={{ left: `${crop.x * 100}%`, top: `${crop.y * 100}%`, width: `${crop.width * 100}%`, height: `${crop.height * 100}%` }}
                     />
                   )}
+                  {handwritingMode && preview === "processed" && handwritingCrop && handwritingCrop.width > 0.01 && handwritingCrop.height > 0.01 && (
+                    <div
+                      className="pointer-events-none absolute border-2 border-amber-300 bg-amber-300/20"
+                      style={{ left: `${handwritingCrop.x * 100}%`, top: `${handwritingCrop.y * 100}%`, width: `${handwritingCrop.width * 100}%`, height: `${handwritingCrop.height * 100}%` }}
+                    />
+                  )}
                 </div>
               </div>
 
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <p className="text-xs text-slate-400">On the original preview, drag across the card to set a crop. Rotation and crop always start from the preserved original.</p>
+                <p className="text-xs text-slate-400">
+                  {handwritingMode
+                    ? "On the processed preview, drag across one handwritten line for TrOCR."
+                    : "On the original preview, drag across the card to set a crop. Rotation and crop always start from the preserved original."}
+                </p>
                 <button type="button" onClick={applyAdjustment} disabled={busyImageId === selected.id || (rotation === 0 && (!crop || crop.width < 0.02 || crop.height < 0.02))} className="rounded-md bg-emerald-700 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-40">
                   {busyImageId === selected.id ? "Processing…" : "Apply adjustments"}
                 </button>

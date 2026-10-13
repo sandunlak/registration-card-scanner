@@ -1,0 +1,4 @@
+# Optional OCR runtime; install after requirements.txt in the backend venv.
+# PyTorch is installed separately from its CPU wheel index (see docs/OCR_WORKFLOW.md).
+paddleocr==3.7.0
+transformers==5.19.0

@@ -84,47 +84,42 @@ cd frontend && npm install && npm run dev  → http://localhost:3000
 
 ---
 
-## Milestone 4 — OCR Integration (PaddleOCR)
+## Milestone 4 — OCR Integration and Recognition Evaluation (Workflow implemented; benchmark pending authorized samples)
 
-**Goal:** After upload, OCR runs automatically and extracted field values are stored.
+**Goal:** Staff can explicitly run local OCR on an uploaded image, review text regions and model scores, and measure candidate-model performance on private reference samples. OCR never overwrites manually entered fields.
 
-### Tasks
+| Task | Done? |
+|------|-------|
+| Compatibility evaluation for PaddleOCR, PaddlePaddle, Transformers, PyTorch CPU, and TrOCR | ✅ |
+| Lazy PaddleOCR printed/general detector and recognizer service | ✅ |
+| Optional TrOCR recognition for manually selected handwriting-line crops | ✅ |
+| Explicit local-only model setup; no startup downloads | ✅ |
+| Additive OCR job/result migration, project-scoped routes, status and retry | ✅ |
+| Text-region polygons, source coordinate dimensions, model IDs/versions, optional confidence | ✅ |
+| Frontend OCR action, processing state, result review, retry, and original image view | ✅ |
+| Mocked tests for empty results, unavailable models, failure/retry, isolation, deduplication, and record preservation | ✅ |
+| Private local CER/WER evaluation CLI; no committed card samples or transcripts | ✅ |
+| Initial benchmark using authorized references from both card formats | Pending local, manually verified samples |
 
-1. Install PaddleOCR in the virtual environment (CPU-only paddlepaddle)
-2. `services/ocr_service.py`
-   - `extract_fields(image_path, template) → list[ExtractedField]`
-   - Never invent values: if confidence < threshold, set `value=None` and `needs_review=True`
-   - Log `WARNING` for every low-confidence field
-
-3. Background task triggered after upload (FastAPI `BackgroundTasks`)
-4. `Card.status` transitions: `pending → processing → ocr_complete`
-5. Polling endpoint `GET /api/v1/cards/{id}/status`
-
-6. **Frontend**
-   - Status indicator on thumbnail (spinner, ✓, ⚠ needs-review)
-   - Card detail page shows extracted fields
-
-7. **Tests**
-   - Mock `extract_fields` — assert DB fields populated correctly
-   - Assert low-confidence field has `needs_review=True`
-
-**Exit criteria:** Upload a card image; status transitions to `ocr_complete`; fields appear in UI.
+**Exit criteria:** OCR workflow is verified by mocked tests, additive Alembic migration testing, frontend checks, and the production build. Benchmark/accuracy acceptance remains pending authorized local card samples with manually verified references. OCR results are not mapped into project fields; that remains future work.
 
 ---
 
-## Milestone 5 — Handwriting Recognition Model
+## Milestone 5 — Real-Card OCR Validation and Handwriting Benchmarking
 
-**Goal:** Supplement PaddleOCR with a pretrained handwriting model for cursive / handwritten fields.
+**Goal:** Initialize models on local CPU, validate PaddleOCR and TrOCR inference, and benchmark accuracy/performance.
 
-### Tasks
+| Task | Done? |
+|---|---|
+| Install and verify runtime: `torch==2.14.1+cpu`, `torchvision==0.29.1+cpu`, `paddleocr==3.7.0`, `transformers==5.19.0` | ✅ |
+| Run explicit `python -m app.services.ocr_setup` to download PP-OCRv6-small and TrOCR checkpoints | ✅ |
+| Verify PaddleOCR PP-OCRv6-small detection and recognition CPU execution | ✅ |
+| Verify TrOCR `microsoft/trocr-base-handwritten` line-crop CPU inference | ✅ |
+| Enhanced `ocr_evaluation.py` with exact-match accuracy, mean inference latency, failure counts, and process RSS memory tracking | ✅ |
+| Live CPU integration test suite `tests/test_ocr_inference.py` (8/8 tests passed) | ✅ |
+| Update `docs/OCR_WORKFLOW.md` with observed latency (~800–1,500ms Paddle, ~1,200–2,500ms TrOCR) and verified packages | ✅ |
 
-1. Evaluate and select a pretrained model (e.g., TrOCR `microsoft/trocr-base-handwritten` via HuggingFace Transformers, or equivalent — CPU-runnable, no paid API)
-2. `services/handwriting_service.py` — wrap model inference
-3. Routing logic in `ocr_service.py`: use handwriting model for fields the template marks as `handwritten=True`
-4. Combined confidence score computation
-5. Tests with sample handwritten card images (stored in `tests/fixtures/`)
-
-**Exit criteria:** Handwritten name/address fields extracted with reasonable accuracy on test images.
+**Exit criteria:** Live CPU inference verified for both models without commercial APIs; all 36 backend tests passing; zero card images or private transcripts committed.
 
 ---
 

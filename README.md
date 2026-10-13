@@ -162,6 +162,7 @@ The UI is then available at **http://localhost:3000**
 
 See [`docs/DATABASE_BACKUP.md`](docs/DATABASE_BACKUP.md) for full backup and disaster recovery procedures.
 See [`docs/IMAGE_WORKFLOW.md`](docs/IMAGE_WORKFLOW.md) for upload endpoints, image storage, retention, and privacy details.
+See [`docs/OCR_WORKFLOW.md`](docs/OCR_WORKFLOW.md) for opt-in local model setup, OCR endpoints, and private evaluation instructions.
 
 ### Frontend
 
@@ -186,6 +187,8 @@ See [`docs/IMAGE_WORKFLOW.md`](docs/IMAGE_WORKFLOW.md) for upload endpoints, ima
 | `MAX_IMAGE_PIXELS` | `40000000` | Maximum decoded pixels per image |
 | `MAX_IMAGES_PER_BATCH` | `10` | Maximum files in one batch request |
 | `IMAGE_RETENTION_DAYS` | `90` | Days before originals are eligible for deletion |
+| `OCR_MODELS_DIR` | `./data/models/ocr` | Private local model weights cache; populated only by explicit setup command |
+| `OCR_MAX_HANDWRITING_REGIONS` | `20` | Maximum manual line crops passed to TrOCR per OCR job |
 | `LOG_LEVEL` | `INFO` | Python logging level |
 | `ALLOWED_ORIGINS` | `http://localhost:3000` | CORS origins (comma-separated) |
 

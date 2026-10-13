@@ -11,6 +11,7 @@ const allowedDevOrigins = (process.env.NEXT_ALLOWED_DEV_ORIGINS ?? "10.69.1.115"
   .filter(Boolean);
 
 const nextConfig: NextConfig = {
+  distDir: process.env.NEXT_BUILD_DIST_DIR ?? ".next",
   /* config options here */
   cacheComponents: true,
   partialPrefetching: true,

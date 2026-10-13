@@ -21,16 +21,9 @@ alembic>=1.13.0               # database schema migrations
 pydantic-settings>=2.3.0      # Settings from env / .env file
 
 # ---------------------------------------------------------------------------
-# Image processing  (OpenCV headless — no GUI deps)
+# Image processing (OpenCV build shared with optional PaddleOCR runtime)
 # ---------------------------------------------------------------------------
-opencv-python-headless>=4.10.0
-
-# ---------------------------------------------------------------------------
-# OCR  — PaddleOCR and dependencies
-# NOTE: paddlepaddle wheel varies by platform; install separately if GPU wanted
-# ---------------------------------------------------------------------------
-paddlepaddle>=2.6.1           # CPU-only paddle; for GPU see docs
-paddleocr>=2.8.1
+opencv-contrib-python==4.10.0.84  # Required by PaddleOCR; includes the existing cv2 APIs
 
 # ---------------------------------------------------------------------------
 # Excel export

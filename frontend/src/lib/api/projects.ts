@@ -15,6 +15,8 @@ import type {
   RecordListResponse,
   ImageAsset,
   ImageAdjust,
+  OcrJob,
+  OcrResultsResponse,
 } from "@/types";
 
 const BASE = "";
@@ -300,4 +302,50 @@ export function replaceProjectImage(
 
 export function deleteProjectImage(projectId: number, imageId: number): Promise<void> {
   return imageRequest(`${BASE}/api/projects/${projectId}/images/${imageId}`, "DELETE");
+}
+
+// ---------------------------------------------------------------------------
+// OCR jobs and recognition regions
+// ---------------------------------------------------------------------------
+
+export async function getProjectImageOcrJob(
+  projectId: number,
+  imageId: number
+): Promise<OcrJob | null> {
+  const response = await fetch(`${BASE}/api/projects/${projectId}/images/${imageId}/ocr`, {
+    cache: "no-store",
+  });
+  return handleResponse<OcrJob | null>(response);
+}
+
+export function startProjectImageOcr(
+  projectId: number,
+  imageId: number,
+  handwritingRegions: NonNullable<ImageAdjust["crop"]>[] = []
+): Promise<OcrJob> {
+  return imageRequest(`${BASE}/api/projects/${projectId}/images/${imageId}/ocr`, "POST", {
+    handwriting_regions: handwritingRegions,
+  });
+}
+
+export function getProjectImageOcrResults(
+  projectId: number,
+  imageId: number,
+  jobId: number
+): Promise<OcrResultsResponse> {
+  return imageRequest(
+    `${BASE}/api/projects/${projectId}/images/${imageId}/ocr/${jobId}/results`,
+    "GET"
+  );
+}
+
+export function retryProjectImageOcr(
+  projectId: number,
+  imageId: number,
+  jobId: number
+): Promise<OcrJob> {
+  return imageRequest(
+    `${BASE}/api/projects/${projectId}/images/${imageId}/ocr/${jobId}/retry`,
+    "POST"
+  );
 }
